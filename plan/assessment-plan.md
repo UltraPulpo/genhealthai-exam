@@ -1683,15 +1683,15 @@ This table is the single source of truth for task progress. Update status here a
 
 | Task | Description | Prerequisites | Conflicts | Status |
 |------|-------------|---------------|-----------|--------|
-| 1.1 | Backend project scaffolding | None | — | [ ] |
-| 1.2 | Frontend project scaffolding | None | — | [ ] |
-| 2.1 | Config module + app stub | 1.1 | — | [ ] |
-| 2.2 | Error utilities + PDF parser | 1.1 | — | [ ] |
-| 2.3 | Extensions module | 2.1 | — | [ ] |
-| 2.4 | Frontend types + validators | 1.2 | — | [ ] |
-| 3.1 | All ORM models | 2.3 | — | [ ] |
-| 3.2 | Frontend API client + functions | 2.4 | — | [ ] |
-| 3.3 | Frontend common components | 1.2 | — | [ ] |
+| 1.1 | Backend project scaffolding | None | — | [x] |
+| 1.2 | Frontend project scaffolding | None | — | [x] |
+| 2.1 | Config module + app stub | 1.1 | — | [x] |
+| 2.2 | Error utilities + PDF parser | 1.1 | — | [x] |
+| 2.3 | Extensions module | 2.1 | — | [x] |
+| 2.4 | Frontend types + validators | 1.2 | — | [x] |
+| 3.1 | All ORM models | 2.3 | — | [x] |
+| 3.2 | Frontend API client + functions | 2.4 | — | [x] |
+| 3.3 | Frontend common components | 1.2 | — | [x] |
 | 4.1 | All Marshmallow schemas | 3.1 | — | [ ] |
 | 4.2 | All repositories | 3.1 | — | [ ] |
 | 4.3 | Frontend auth context + hooks | 3.2 | — | [ ] |
@@ -1718,10 +1718,11 @@ This table is the single source of truth for task progress. Update status here a
 | 8.7 | Activity + health + misc tests | 8.1 | 8.2–8.6 (shared `conftest.py`) | [ ] |
 
 **Eligible tasks** (status `[ ]`, all prerequisites `[x]`, no conflicting task `[~]`):
-- Task 1.1: Backend project scaffolding
-- Task 1.2: Frontend project scaffolding
+- Task 4.1: All Marshmallow schemas
+- Task 4.2: All repositories
+- Task 4.3: Frontend auth context + hooks
 
-**Progress:** 0 / 34 tasks complete
+**Progress:** 9 / 34 tasks complete
 
 ---
 
