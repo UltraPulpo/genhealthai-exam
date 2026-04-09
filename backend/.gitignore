@@ -13,3 +13,6 @@ dist/
 venv/
 .mypy_cache/
 .ruff_cache/
+
+app/static/
+
