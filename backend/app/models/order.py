@@ -20,12 +20,12 @@ class Order(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     created_by = db.Column(db.String(36), db.ForeignKey("user.id"), nullable=False)
-    status = db.Column(db.String(50), default=OrderStatus.PENDING.value)
+    status = db.Column(db.String(50), default=OrderStatus.PENDING.value, index=True)
     error_message = db.Column(db.Text, nullable=True)
 
     # Patient fields
     patient_first_name = db.Column(db.String(255), nullable=True)
-    patient_last_name = db.Column(db.String(255), nullable=True)
+    patient_last_name = db.Column(db.String(255), nullable=True, index=True)
     patient_dob = db.Column(db.Date, nullable=True)
 
     # Insurance fields
@@ -52,7 +52,7 @@ class Order(db.Model):
     delivery_notes = db.Column(db.String(255), nullable=True)
     delivery_date = db.Column(db.Date, nullable=True)
 
-    created_at = db.Column(db.DateTime, default=func.now())
+    created_at = db.Column(db.DateTime, default=func.now(), index=True)
     updated_at = db.Column(db.DateTime, default=func.now(), onupdate=func.now())
 
     document = db.relationship("Document", uselist=False, back_populates="order")
