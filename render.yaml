@@ -8,7 +8,7 @@ services:
       pip install -r requirements.txt
       cd ../frontend && npm ci && npm run build
       cp -r build/ ../backend/app/static/
-    startCommand: gunicorn --bind=0.0.0.0:$PORT --workers=2 --timeout=120 "app:create_app()"
+    startCommand: bash startup.sh
     envVars:
       - key: APP_CONFIG
         value: production
@@ -19,15 +19,10 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: DATABASE_URL
-        value: sqlite:////opt/render/project/data/app.db
+        value: sqlite:///app.db
       - key: UPLOAD_FOLDER
-        value: /opt/render/project/data/uploads
+        value: ./uploads
       - key: CORS_ORIGINS
         value: "*"
       - key: PYTHON_VERSION
         value: "3.12.3"
-    disk:
-      name: genhealthai-data
-      mountPath: /opt/render/project/data
-      sizeGB: 1
-    preDeployCommand: cd backend && python -m flask db upgrade
