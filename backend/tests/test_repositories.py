@@ -4,9 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from flask import Flask
 
-from app.extensions import db as _db
 from app.models import (
     ActivityLog,
     Document,
@@ -27,22 +25,9 @@ from app.repositories import (
 # ── Fixtures ────────────────────────────────────────────────────────
 
 
-@pytest.fixture
-def app():
-    app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["TESTING"] = True
-    _db.init_app(app)
-    with app.app_context():
-        _db.create_all()
-        yield app
-        _db.drop_all()
-
-
-@pytest.fixture
-def session(app):
-    with app.app_context():
-        yield _db.session
+@pytest.fixture()
+def session(db_session):
+    return db_session
 
 
 def _make_user(session, **overrides):

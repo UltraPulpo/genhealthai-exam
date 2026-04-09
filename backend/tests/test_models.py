@@ -4,31 +4,15 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
-from flask import Flask
 
-from app.extensions import db
 from app.models import ActivityLog, Document, Order, OrderStatus, RefreshToken, User
 
 
+# Uses shared `app` and `db_session` fixtures from conftest.py.
+# Alias db_session → session for all existing tests.
 @pytest.fixture()
-def app():
-    """Create a minimal Flask app with an in-memory SQLite database."""
-    app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    db.init_app(app)
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.session.rollback()
-        db.drop_all()
-
-
-@pytest.fixture()
-def session(app):
-    """Return a database session scoped to the test."""
-    with app.app_context():
-        yield db.session
+def session(db_session):
+    return db_session
 
 
 # ---------------------------------------------------------------------------

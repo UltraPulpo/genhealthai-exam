@@ -110,7 +110,7 @@ class ExtractionService:
                     "order_id": order.id,
                     "original_filename": file.filename,
                     "stored_path": stored_path,
-                    "file_size": file_size,
+                    "file_size_bytes": file_size,
                     "content_type": "application/pdf",
                 }
             )
@@ -200,6 +200,14 @@ class ExtractionService:
             if key in _DATE_FIELDS and value is not None:
                 if not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
                     value = None
+                else:
+                    from datetime import date
+
+                    y, m, d = value.split("-")
+                    try:
+                        value = date(int(y), int(m), int(d))
+                    except ValueError:
+                        value = None
             cleaned[key] = value
         return cleaned
 
