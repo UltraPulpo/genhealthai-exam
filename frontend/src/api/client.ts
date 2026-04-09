@@ -48,14 +48,8 @@ apiClient.interceptors.response.use(
         } catch {
           setAccessToken(null);
           localStorage.removeItem('refresh_token');
-          window.location.href = '/login';
-          return Promise.reject(error);
         }
       }
-
-      setAccessToken(null);
-      localStorage.removeItem('refresh_token');
-      window.location.href = '/login';
     }
 
     return Promise.reject(error);

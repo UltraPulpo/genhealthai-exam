@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const storedToken = localStorage.getItem('refresh_token');
     if (!storedToken) {
       setIsLoading(false);
@@ -35,20 +36,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     auth
       .refreshToken(storedToken)
       .then((data) => {
+        if (cancelled) return;
         setAccessToken(data.access_token);
         localStorage.setItem('refresh_token', data.refresh_token);
         return auth.getMe();
       })
       .then((profile) => {
+        if (cancelled || !profile) return;
         setUser(profile);
       })
       .catch(() => {
+        if (cancelled) return;
         localStorage.removeItem('refresh_token');
         setAccessToken(null);
       })
       .finally(() => {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loginFn = useCallback(async (email: string, password: string) => {

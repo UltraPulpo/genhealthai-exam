@@ -86,9 +86,10 @@ class TestExtractionServiceUpload:
         assert result.patient_first_name == "John"
 
     @patch("app.services.extraction_service.anthropic.Anthropic")
+    @patch("app.utils.pdf_parser.extract_page_images", return_value=[])
     @patch("app.utils.pdf_parser.extract_text", return_value="")
     def test_extract_no_text(
-        self, mock_extract, mock_anthropic_cls, db_session, app
+        self, mock_extract, mock_extract_images, mock_anthropic_cls, db_session, app
     ):
         user = UserFactory.create(db_session)
         order = OrderFactory.create(db_session, created_by=user.id)
@@ -98,7 +99,7 @@ class TestExtractionServiceUpload:
         file.filename = "empty.pdf"
         file.save = MagicMock()
         with patch("os.path.getsize", return_value=100):
-            with pytest.raises(ExtractionError, match="no extractable text"):
+            with pytest.raises(ExtractionError, match="no extractable text or images"):
                 svc.upload_and_extract(order.id, file)
 
     @patch("app.services.extraction_service.anthropic.Anthropic")
@@ -283,9 +284,10 @@ class TestUploadAPI:
         assert resp.status_code == 422
 
     @patch("app.services.extraction_service.anthropic.Anthropic")
+    @patch("app.utils.pdf_parser.extract_page_images", return_value=[])
     @patch("app.utils.pdf_parser.extract_text", return_value="   ")
     def test_upload_no_extractable_text(
-        self, mock_extract, mock_anthropic_cls, client, auth_headers, db_session
+        self, mock_extract, mock_extract_images, mock_anthropic_cls, client, auth_headers, db_session
     ):
         user = UserFactory.create(db_session, email="notext@test.com")
         order = OrderFactory.create(db_session, created_by=user.id)

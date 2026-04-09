@@ -65,6 +65,28 @@ _USER_PROMPT_TEMPLATE = (
     "- delivery_notes (string or null)"
 )
 
+_VISION_PROMPT = (
+    "Extract the following fields from this scanned DME order document and return them as a JSON object.\n\n"
+    "Return a JSON object with these exact keys:\n"
+    "- patient_first_name (string or null)\n"
+    "- patient_last_name (string or null)\n"
+    "- patient_dob (string in YYYY-MM-DD format, or null)\n"
+    "- insurance_provider (string or null)\n"
+    "- insurance_id (string or null)\n"
+    "- group_number (string or null)\n"
+    "- ordering_provider_name (string or null)\n"
+    "- provider_npi (string or null)\n"
+    "- provider_phone (string or null)\n"
+    "- equipment_type (string or null)\n"
+    "- equipment_description (string or null)\n"
+    "- hcpcs_code (string or null)\n"
+    "- authorization_number (string or null)\n"
+    "- authorization_status (string or null)\n"
+    "- delivery_address (string or null)\n"
+    "- delivery_date (string in YYYY-MM-DD format, or null)\n"
+    "- delivery_notes (string or null)"
+)
+
 
 class ExtractionService:
     def __init__(self, order_repo: OrderRepository, doc_repo: DocumentRepository):
@@ -95,13 +117,17 @@ class ExtractionService:
         try:
             text = self._extract_text(stored_path)
 
-            if not text.strip():
-                order.status = "failed"
-                order.error_message = "PDF contains no extractable text"
-                self.order_repo.commit()
-                raise ExtractionError("PDF contains no extractable text")
+            if text.strip():
+                data = self._call_llm(text, order)
+            else:
+                page_images = self._extract_images(stored_path)
+                if not page_images:
+                    order.status = "failed"
+                    order.error_message = "PDF contains no extractable text or images"
+                    self.order_repo.commit()
+                    raise ExtractionError("PDF contains no extractable text or images")
+                data = self._call_llm_vision(page_images, order)
 
-            data = self._call_llm(text, order)
             cleaned = self._validate_extraction(data)
             self._populate_order(order, cleaned)
 
@@ -141,6 +167,11 @@ class ExtractionService:
 
         return pdf_parser.extract_text(file_path)
 
+    def _extract_images(self, file_path: str) -> list[str]:
+        from app.utils import pdf_parser
+
+        return pdf_parser.extract_page_images(file_path)
+
     def _call_llm(self, text: str, order) -> dict:
         model = current_app.config.get("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
         max_tokens = current_app.config.get("ANTHROPIC_MAX_TOKENS", 1024)
@@ -168,7 +199,77 @@ class ExtractionService:
                     last_exc = exc
                     time.sleep(2**attempt)
                 else:
-                    raise
+                    order.status = "failed"
+                    order.error_message = f"AI service error: {exc.message}"
+                    self.order_repo.commit()
+                    raise ExtractionError(f"AI service error: {exc.message}") from exc
+        else:
+            order.status = "failed"
+            order.error_message = "AI extraction service unavailable"
+            self.order_repo.commit()
+            raise ExtractionError("AI extraction service unavailable") from last_exc
+
+        try:
+            data = json.loads(response.content[0].text)
+        except json.JSONDecodeError as exc:
+            order.status = "failed"
+            order.error_message = "AI extraction returned invalid data"
+            self.order_repo.commit()
+            raise ExtractionError("AI extraction returned invalid data") from exc
+
+        if not isinstance(data, dict):
+            order.status = "failed"
+            order.error_message = "AI extraction returned invalid data"
+            self.order_repo.commit()
+            raise ExtractionError("AI extraction returned invalid data")
+
+        return data
+
+    def _call_llm_vision(self, page_images: list[str], order) -> dict:
+        """Send scanned PDF page images to Claude's vision API for extraction."""
+        model = current_app.config.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+        max_tokens = current_app.config.get("ANTHROPIC_MAX_TOKENS", 1024)
+        timeout = current_app.config.get("ANTHROPIC_TIMEOUT", 30)
+        max_retries = current_app.config.get("ANTHROPIC_MAX_RETRIES", 3)
+
+        client = anthropic.Anthropic(timeout=timeout)
+
+        content: list[dict] = []
+        for img_b64 in page_images:
+            content.append(
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": img_b64,
+                    },
+                }
+            )
+        content.append({"type": "text", "text": _VISION_PROMPT})
+
+        last_exc = None
+        for attempt in range(max_retries):
+            try:
+                response = client.messages.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    system=_SYSTEM_PROMPT,
+                    messages=[{"role": "user", "content": content}],
+                )
+                break
+            except (anthropic.RateLimitError, anthropic.APITimeoutError) as exc:
+                last_exc = exc
+                time.sleep(2**attempt)
+            except anthropic.APIStatusError as exc:
+                if exc.status_code >= 500:
+                    last_exc = exc
+                    time.sleep(2**attempt)
+                else:
+                    order.status = "failed"
+                    order.error_message = f"AI service error: {exc.message}"
+                    self.order_repo.commit()
+                    raise ExtractionError(f"AI service error: {exc.message}") from exc
         else:
             order.status = "failed"
             order.error_message = "AI extraction service unavailable"
