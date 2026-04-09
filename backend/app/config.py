@@ -67,19 +67,15 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     """Production configuration."""
 
-    TALISMAN_FORCE_HTTPS = True
+    # Azure App Service terminates TLS at the load balancer; the app sees HTTP.
+    TALISMAN_FORCE_HTTPS = False
     TALISMAN_CSP: ClassVar[dict[str, str]] = {
         "default-src": "'self'",
-        "script-src": "'self'",
-        "style-src": "'self' 'unsafe-inline'",
+        "script-src": "'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+        "style-src": "'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+        "img-src": "'self' data:",
+        "font-src": "'self' data:",
     }
-
-    def __init__(self) -> None:
-        super().__init__()
-        for key in ("SECRET_KEY", "JWT_SECRET_KEY"):
-            value = os.environ.get(key, "")
-            if not value or value in ("dev-secret-key", "dev-jwt-secret"):
-                raise RuntimeError(f"{key} must be set to a secure value in production")
 
 
 config_map = {

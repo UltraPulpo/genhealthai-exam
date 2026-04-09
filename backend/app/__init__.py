@@ -2,7 +2,7 @@
 
 import os
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from sqlalchemy import event
 
 from app.config import config_map
@@ -16,7 +16,8 @@ def create_app(config_name=None):
     """Create and configure the Flask application."""
     config_name = config_name or os.environ.get("APP_CONFIG", "production")
 
-    app = Flask(__name__)
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    app = Flask(__name__, static_folder=static_dir, static_url_path="")
     app.config.from_object(config_map[config_name])
 
     # Validate required secrets in production
@@ -57,5 +58,16 @@ def create_app(config_name=None):
             cursor.close()
 
     os.makedirs(app.config.get("UPLOAD_FOLDER", "./uploads"), exist_ok=True)
+
+    # SPA catch-all: serve React index.html for non-API routes
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve_spa(path):
+        if path and os.path.exists(os.path.join(static_dir, path)):
+            return send_from_directory(static_dir, path)
+        index = os.path.join(static_dir, "index.html")
+        if os.path.exists(index):
+            return send_from_directory(static_dir, "index.html")
+        return {"message": "GenHealth AI API", "docs": "/api/v1/docs"}, 200
 
     return app

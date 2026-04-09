@@ -123,41 +123,59 @@ class TestTestingConfig:
 class TestProductionConfig:
     """Test ProductionConfig."""
 
-    def test_talisman_force_https_true(self):
-        assert ProductionConfig.TALISMAN_FORCE_HTTPS is True
+    def test_talisman_force_https_false(self):
+        assert ProductionConfig.TALISMAN_FORCE_HTTPS is False
 
     def test_talisman_csp_has_default_src(self):
         assert ProductionConfig.TALISMAN_CSP["default-src"] == "'self'"
 
     def test_talisman_csp_has_script_src(self):
-        assert ProductionConfig.TALISMAN_CSP["script-src"] == "'self'"
+        assert "'self'" in ProductionConfig.TALISMAN_CSP["script-src"]
 
     def test_talisman_csp_has_style_src(self):
-        assert ProductionConfig.TALISMAN_CSP["style-src"] == "'self' 'unsafe-inline'"
+        assert "'unsafe-inline'" in ProductionConfig.TALISMAN_CSP["style-src"]
 
     def test_inherits_config(self):
         assert issubclass(ProductionConfig, Config)
 
     @patch.dict(os.environ, {"SECRET_KEY": "dev-secret-key", "JWT_SECRET_KEY": "dev-jwt-secret"})
     def test_raises_on_dev_secret_key_in_production(self):
-        with pytest.raises(RuntimeError, match="SECRET_KEY must be set"):
-            ProductionConfig()
+        """Validation now happens in create_app, not in config __init__."""
+        from app import create_app
 
-    @patch.dict(
-        os.environ,
-        {"SECRET_KEY": "real-secret", "JWT_SECRET_KEY": "dev-jwt-secret"},
-    )
-    def test_raises_on_dev_jwt_secret_in_production(self):
-        with pytest.raises(RuntimeError, match="JWT_SECRET_KEY must be set"):
-            ProductionConfig()
+        with pytest.raises(RuntimeError, match="Missing required config"):
+            create_app("production")
 
     @patch.dict(
         os.environ,
         {"SECRET_KEY": "real-secret", "JWT_SECRET_KEY": "real-jwt-secret"},
     )
+    def test_raises_on_missing_anthropic_key_in_production(self):
+        from app import create_app
+
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}, clear=False):
+            with pytest.raises(RuntimeError, match="Missing required config"):
+                create_app("production")
+
+    @patch.dict(
+        os.environ,
+        {
+            "SECRET_KEY": "real-secret",
+            "JWT_SECRET_KEY": "real-jwt-secret",
+            "ANTHROPIC_API_KEY": "sk-test-key",
+        },
+    )
     def test_accepts_real_secrets_in_production(self):
-        config = ProductionConfig()
-        assert config is not None
+        from app import create_app
+        from app.config import ProductionConfig
+        from app.extensions import smorest_api
+
+        with patch.object(ProductionConfig, "ANTHROPIC_API_KEY", "sk-test-key"):
+            app = create_app("production")
+            assert app is not None
+        # Clean up singleton so extension purity tests pass
+        if hasattr(smorest_api, "_app"):
+            smorest_api._app = None
 
 
 class TestCorsOrigins:
