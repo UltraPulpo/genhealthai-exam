@@ -21,9 +21,10 @@ class Config:
 
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
     ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
-    ANTHROPIC_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "1024"))
-    ANTHROPIC_TIMEOUT = int(os.environ.get("ANTHROPIC_TIMEOUT", "30"))
+    ANTHROPIC_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "4096"))
+    ANTHROPIC_TIMEOUT = int(os.environ.get("ANTHROPIC_TIMEOUT", "60"))
     ANTHROPIC_MAX_RETRIES = int(os.environ.get("ANTHROPIC_MAX_RETRIES", "3"))
+    VISION_MAX_PAGES = int(os.environ.get("VISION_MAX_PAGES", "10"))
 
     MAX_UPLOAD_SIZE_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "10"))
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "./uploads")

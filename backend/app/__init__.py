@@ -18,6 +18,7 @@ def create_app(config_name=None):
 
     static_dir = os.path.join(os.path.dirname(__file__), "static")
     app = Flask(__name__, static_folder=static_dir, static_url_path="")
+    app.url_map.strict_slashes = False
     app.config.from_object(config_map[config_name])
 
     # Validate required secrets in production
