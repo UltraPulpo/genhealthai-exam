@@ -24,6 +24,7 @@ class Config:
     ANTHROPIC_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "4096"))
     ANTHROPIC_TIMEOUT = int(os.environ.get("ANTHROPIC_TIMEOUT", "60"))
     ANTHROPIC_MAX_RETRIES = int(os.environ.get("ANTHROPIC_MAX_RETRIES", "3"))
+    VISION_MAX_PAGES = int(os.environ.get("VISION_MAX_PAGES", "10"))
 
     MAX_UPLOAD_SIZE_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "10"))
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "./uploads")

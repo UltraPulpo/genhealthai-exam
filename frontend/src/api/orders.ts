@@ -30,7 +30,7 @@ export async function deleteOrder(id: string): Promise<void> {
 export async function uploadDocument(orderId: string, file: File): Promise<Order> {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await apiClient.post<Order>(`/api/v1/orders/${orderId}/upload`, formData, {
+  const response = await apiClient.post<Order>(`/api/v1/orders/${orderId}/upload/`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;

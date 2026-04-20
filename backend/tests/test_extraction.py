@@ -103,6 +103,30 @@ class TestExtractionServiceUpload:
                 svc.upload_and_extract(order.id, file)
 
     @patch("app.services.extraction_service.anthropic.Anthropic")
+    @patch(
+        "app.utils.pdf_parser.extract_page_images",
+        return_value=["base64imagedata=="],
+    )
+    @patch("app.utils.pdf_parser.extract_text", return_value="")
+    def test_extract_vision_path_success(
+        self, mock_extract, mock_extract_images, mock_anthropic_cls, db_session, app
+    ):
+        """Vision extraction path is used when text is empty but images are available."""
+        mock_anthropic_cls.return_value = _mock_anthropic_response(_LLM_RESPONSE)
+        user = UserFactory.create(db_session)
+        order = OrderFactory.create(db_session, created_by=user.id)
+        svc = _extraction_service(db_session)
+
+        file = MagicMock()
+        file.filename = "scanned.pdf"
+        file.save = MagicMock()
+        with patch("os.path.getsize", return_value=1024):
+            result = svc.upload_and_extract(order.id, file)
+
+        assert result.status == "completed"
+        assert result.patient_first_name == "John"
+
+    @patch("app.services.extraction_service.anthropic.Anthropic")
     @patch("app.utils.pdf_parser.extract_text", return_value="Some text")
     def test_extract_llm_timeout(
         self, mock_extract, mock_anthropic_cls, db_session, app
@@ -144,6 +168,53 @@ class TestExtractionServiceUpload:
 
         file = MagicMock()
         file.filename = "bad_json.pdf"
+        file.save = MagicMock()
+        with patch("os.path.getsize", return_value=100):
+            with pytest.raises(ExtractionError, match="invalid data"):
+                svc.upload_and_extract(order.id, file)
+
+    @patch("app.services.extraction_service.anthropic.Anthropic")
+    @patch("app.utils.pdf_parser.extract_text", return_value="Some text")
+    def test_extract_llm_empty_content(
+        self, mock_extract, mock_anthropic_cls, db_session, app
+    ):
+        """Empty response.content array should raise ExtractionError."""
+        mock_resp = MagicMock()
+        mock_resp.content = []
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_resp
+        mock_anthropic_cls.return_value = mock_client
+
+        user = UserFactory.create(db_session)
+        order = OrderFactory.create(db_session, created_by=user.id)
+        svc = _extraction_service(db_session)
+
+        file = MagicMock()
+        file.filename = "empty_content.pdf"
+        file.save = MagicMock()
+        with patch("os.path.getsize", return_value=100):
+            with pytest.raises(ExtractionError, match="invalid data"):
+                svc.upload_and_extract(order.id, file)
+
+    @patch("app.services.extraction_service.anthropic.Anthropic")
+    @patch("app.utils.pdf_parser.extract_text", return_value="Some text")
+    def test_extract_llm_non_text_block(
+        self, mock_extract, mock_anthropic_cls, db_session, app
+    ):
+        """Non-text first block in response.content should raise ExtractionError."""
+        non_text_block = MagicMock(spec=[])  # no 'text' attribute
+        mock_resp = MagicMock()
+        mock_resp.content = [non_text_block]
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_resp
+        mock_anthropic_cls.return_value = mock_client
+
+        user = UserFactory.create(db_session)
+        order = OrderFactory.create(db_session, created_by=user.id)
+        svc = _extraction_service(db_session)
+
+        file = MagicMock()
+        file.filename = "non_text_block.pdf"
         file.save = MagicMock()
         with patch("os.path.getsize", return_value=100):
             with pytest.raises(ExtractionError, match="invalid data"):

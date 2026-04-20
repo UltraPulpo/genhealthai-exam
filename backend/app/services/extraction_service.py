@@ -209,6 +209,12 @@ class ExtractionService:
             self.order_repo.commit()
             raise ExtractionError("AI extraction service unavailable") from last_exc
 
+        if not response.content or not hasattr(response.content[0], "text"):
+            order.status = "failed"
+            order.error_message = "AI extraction returned invalid data"
+            self.order_repo.commit()
+            raise ExtractionError("AI extraction returned invalid data")
+
         try:
             data = json.loads(response.content[0].text)
         except json.JSONDecodeError as exc:
@@ -231,6 +237,9 @@ class ExtractionService:
         max_tokens = current_app.config.get("ANTHROPIC_MAX_TOKENS", 1024)
         timeout = current_app.config.get("ANTHROPIC_TIMEOUT", 30)
         max_retries = current_app.config.get("ANTHROPIC_MAX_RETRIES", 3)
+
+        max_pages = current_app.config.get("VISION_MAX_PAGES", 10)
+        page_images = page_images[:max_pages]
 
         client = anthropic.Anthropic(timeout=timeout)
 
@@ -275,6 +284,12 @@ class ExtractionService:
             order.error_message = "AI extraction service unavailable"
             self.order_repo.commit()
             raise ExtractionError("AI extraction service unavailable") from last_exc
+
+        if not response.content or not hasattr(response.content[0], "text"):
+            order.status = "failed"
+            order.error_message = "AI extraction returned invalid data"
+            self.order_repo.commit()
+            raise ExtractionError("AI extraction returned invalid data")
 
         try:
             data = json.loads(response.content[0].text)
